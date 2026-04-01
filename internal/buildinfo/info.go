@@ -1,6 +1,6 @@
 package buildinfo
 
 var (
-	Version           = "0.0.1"
+	Version           = "v0.1.0"
 	DefaultUpdateRepo = "feassh/gix"
 )
