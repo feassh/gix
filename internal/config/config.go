@@ -118,7 +118,7 @@ type SelfUpdateConfig struct {
 func DefaultValues() Values {
 	return Values{
 		"ai.provider":               "openai",
-		"ai.model":                  "deepseek",
+		"ai.model":                  "gpt-5-mini",
 		"ai.base_url":               "https://api.openai.com/v1",
 		"ai.api_key_env":            "OPENAI_API_KEY",
 		"ai.timeout":                "30",
