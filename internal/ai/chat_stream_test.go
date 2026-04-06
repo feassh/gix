@@ -82,3 +82,21 @@ func TestReasoningEffort(t *testing.T) {
 		t.Fatalf("reasoningEffort(false) = %q", got)
 	}
 }
+
+func TestReadChatCompletionSSEWithMidStreamError(t *testing.T) {
+	stream := strings.NewReader(strings.Join([]string{
+		`data: {"choices":[{"delta":{"reasoning":"Thinking..."}}]}`,
+		"",
+		`data: {"error":{"code":"server_error","message":"Provider disconnected unexpectedly"},"choices":[{"delta":{"content":""},"finish_reason":"error"}]}`,
+		"",
+	}, "\n"))
+
+	observer := &testObserver{}
+	_, err := readChatCompletionSSE(stream, observer)
+	if err == nil || !strings.Contains(err.Error(), "Provider disconnected unexpectedly") {
+		t.Fatalf("expected mid-stream error, got %v", err)
+	}
+	if observer.reasoning.String() != "Thinking..." {
+		t.Fatalf("reasoning = %q", observer.reasoning.String())
+	}
+}

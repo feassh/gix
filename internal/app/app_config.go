@@ -167,7 +167,7 @@ func (a *App) runConfigList(ctx context.Context, args []string) error {
 			"ai.provider":               resolved.AI.Provider,
 			"ai.model":                  resolved.AI.Model,
 			"ai.base_url":               resolved.AI.BaseURL,
-			"ai.api_key_env":            resolved.AI.APIKeyEnv,
+			"ai.api_key":                maskSecret(resolved.AI.APIKey),
 			"ai.timeout":                fmt.Sprintf("%d", resolved.AI.Timeout),
 			"ai.language":               resolved.AI.Language,
 			"ai.thinking":               fmt.Sprintf("%t", resolved.AI.Thinking),

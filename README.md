@@ -425,7 +425,7 @@ gix config list --project
 provider = "openai"
 model = "gpt-5-mini"
 base_url = "https://api.openai.com/v1"
-api_key_env = "OPENAI_API_KEY"
+api_key = "sk-..."
 timeout = 30
 language = "en"
 thinking = true
@@ -470,7 +470,7 @@ base_url = "https://api.github.com"
 
 ```bash
 gix config set --global ai.model gpt-5-mini
-gix config set --global ai.api_key_env OPENAI_API_KEY
+gix config set --global ai.api_key sk-...
 gix config set --global ai.language zh
 gix config set --global ai.thinking true
 gix config set commit.default_scope cli
@@ -480,7 +480,7 @@ gix config set --global self_update.repo your-org/gix
 
 ## AI Commit Message
 
-如果存在 `OPENAI_API_KEY`，`gix commit` 会调用 OpenAI-compatible 的 `/v1/chat/completions` 接口，并使用 `stream` 方式生成 commit message。
+如果配置了 `ai.api_key`，`gix commit` 会调用 OpenAI-compatible 的 `/v1/chat/completions` 接口，并使用 `stream` 方式生成 commit message。
 
 当前实现要点：
 
@@ -496,7 +496,7 @@ gix config set --global self_update.repo your-org/gix
 
 这意味着：
 
-- 不会因为没有 API Key 而让 `gix commit` 完全不可用
+- 不会因为没有配置 API Key 而让 `gix commit` 完全不可用
 - 可以先把命令流用起来，再按需接入 AI
 
 ## 多语言

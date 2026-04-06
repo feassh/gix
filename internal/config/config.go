@@ -23,6 +23,7 @@ var Schema = map[string]KeySpec{
 	"ai.provider":               {Kind: StringKind},
 	"ai.model":                  {Kind: StringKind},
 	"ai.base_url":               {Kind: StringKind},
+	"ai.api_key":                {Kind: StringKind},
 	"ai.api_key_env":            {Kind: StringKind},
 	"ai.timeout":                {Kind: IntKind},
 	"ai.language":               {Kind: StringKind},
@@ -65,13 +66,13 @@ type Config struct {
 }
 
 type AIConfig struct {
-	Provider  string
-	Model     string
-	BaseURL   string
-	APIKeyEnv string
-	Timeout   int
-	Language  string
-	Thinking  bool
+	Provider string
+	Model    string
+	BaseURL  string
+	APIKey   string
+	Timeout  int
+	Language string
+	Thinking bool
 }
 
 type CommitConfig struct {
@@ -120,7 +121,7 @@ func DefaultValues() Values {
 		"ai.provider":               "openai",
 		"ai.model":                  "gpt-5-mini",
 		"ai.base_url":               "https://api.openai.com/v1",
-		"ai.api_key_env":            "OPENAI_API_KEY",
+		"ai.api_key":                "",
 		"ai.timeout":                "30",
 		"ai.language":               "en",
 		"ai.thinking":               "true",
@@ -199,7 +200,7 @@ func (v Values) ToConfig() (Config, error) {
 	cfg.AI.Provider = v["ai.provider"]
 	cfg.AI.Model = v["ai.model"]
 	cfg.AI.BaseURL = v["ai.base_url"]
-	cfg.AI.APIKeyEnv = v["ai.api_key_env"]
+	cfg.AI.APIKey = firstNonEmptyValue(v["ai.api_key"], v["ai.api_key_env"])
 	cfg.AI.Language = v["ai.language"]
 	if cfg.AI.Timeout, err = strconv.Atoi(v["ai.timeout"]); err != nil {
 		return Config{}, fmt.Errorf("invalid ai.timeout: %w", err)
@@ -251,6 +252,15 @@ func (v Values) ToConfig() (Config, error) {
 
 func normalizeKey(path string) string {
 	return strings.ToLower(strings.TrimSpace(path))
+}
+
+func firstNonEmptyValue(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return strings.TrimSpace(value)
+		}
+	}
+	return ""
 }
 
 func normalizeValue(kind ValueKind, value string) (string, error) {

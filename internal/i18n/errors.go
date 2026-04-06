@@ -40,6 +40,12 @@ func localizeKnownError(message string, catalog Catalog) (string, bool) {
 	if arg, ok := parseSuffix(message, "invalid ai.base_url: "); ok {
 		return catalog.S("error.invalid_ai_base_url", arg), true
 	}
+	if arg, ok := parseSuffix(message, "ai stream interrupted: "); ok {
+		return catalog.S("error.ai_stream_interrupted", arg), true
+	}
+	if message == "ai stream ended without message content" {
+		return catalog.S("error.ai_stream_no_content"), true
+	}
 
 	if arg, ok := parseQuoted(message, "unknown command "); ok {
 		return catalog.S("error.unknown_command", arg), true

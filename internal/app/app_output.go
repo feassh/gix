@@ -44,6 +44,17 @@ func detail(label string, value string) ui.Detail {
 	return ui.Detail{Label: fmt.Sprintf("%s:", label), Value: value}
 }
 
+func maskSecret(value string) string {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return ""
+	}
+	if len(trimmed) <= 8 {
+		return "********"
+	}
+	return trimmed[:4] + strings.Repeat("*", len(trimmed)-8) + trimmed[len(trimmed)-4:]
+}
+
 func (a *App) localizeNote(note string) string {
 	switch strings.TrimSpace(note) {
 	case "The current process PATH was updated for this session.":

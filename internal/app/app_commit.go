@@ -317,11 +317,11 @@ func (a *App) runSync(ctx context.Context, args []string) error {
 
 func (a *App) commitGenerator(cfg config.Config) ai.Generator {
 	return ai.NewOpenAIGenerator(ai.OpenAIConfig{
-		BaseURL:   cfg.AI.BaseURL,
-		Model:     cfg.AI.Model,
-		APIKeyEnv: cfg.AI.APIKeyEnv,
-		Timeout:   time.Duration(cfg.AI.Timeout) * time.Second,
-		Thinking:  cfg.AI.Thinking,
+		BaseURL:  cfg.AI.BaseURL,
+		Model:    cfg.AI.Model,
+		APIKey:   cfg.AI.APIKey,
+		Timeout:  time.Duration(cfg.AI.Timeout) * time.Second,
+		Thinking: cfg.AI.Thinking,
 	}, &ai.FallbackGenerator{})
 }
 

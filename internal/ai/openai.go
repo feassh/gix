@@ -7,23 +7,28 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 )
 
 type OpenAIConfig struct {
-	BaseURL   string
-	Model     string
-	APIKeyEnv string
-	Timeout   time.Duration
-	Thinking  bool
+	BaseURL  string
+	Model    string
+	APIKey   string
+	Timeout  time.Duration
+	Thinking bool
 }
 
 type OpenAIGenerator struct {
 	config   OpenAIConfig
 	fallback Generator
 	client   *http.Client
+}
+
+type observedStream struct {
+	inner        StreamObserver
+	sawReasoning bool
+	sawContent   bool
 }
 
 func NewOpenAIGenerator(cfg OpenAIConfig, fallback Generator) *OpenAIGenerator {
@@ -42,7 +47,7 @@ func NewOpenAIGenerator(cfg OpenAIConfig, fallback Generator) *OpenAIGenerator {
 }
 
 func (g *OpenAIGenerator) Generate(ctx context.Context, req CommitRequest) (CommitMessage, error) {
-	apiKey := os.Getenv(g.config.APIKeyEnv)
+	apiKey := strings.TrimSpace(g.config.APIKey)
 	if strings.TrimSpace(apiKey) == "" {
 		return g.fallback.Generate(ctx, req)
 	}
@@ -88,11 +93,18 @@ func (g *OpenAIGenerator) Generate(ctx context.Context, req CommitRequest) (Comm
 		return g.fallback.Generate(ctx, req)
 	}
 
-	raw, err := g.readChatCompletionStream(resp, req.Observer)
+	observer := &observedStream{inner: req.Observer}
+	raw, err := g.readChatCompletionStream(resp, observer)
 	if err != nil {
+		if observer.started() {
+			return CommitMessage{}, fmt.Errorf("ai stream interrupted: %w", err)
+		}
 		return g.fallback.Generate(ctx, req)
 	}
 	if raw == "" {
+		if observer.started() {
+			return CommitMessage{}, fmt.Errorf("ai stream ended without message content")
+		}
 		return g.fallback.Generate(ctx, req)
 	}
 
@@ -128,6 +140,34 @@ func (g *OpenAIGenerator) readChatCompletionStream(resp *http.Response, observer
 		return readChatCompletionSSE(resp.Body, observer)
 	}
 	return readChatCompletionJSON(resp.Body, observer)
+}
+
+func (o *observedStream) OnReasoningDelta(delta string) {
+	if delta != "" {
+		o.sawReasoning = true
+	}
+	if o.inner != nil {
+		o.inner.OnReasoningDelta(delta)
+	}
+}
+
+func (o *observedStream) OnContentDelta(delta string) {
+	if delta != "" {
+		o.sawContent = true
+	}
+	if o.inner != nil {
+		o.inner.OnContentDelta(delta)
+	}
+}
+
+func (o *observedStream) OnComplete() {
+	if o.inner != nil {
+		o.inner.OnComplete()
+	}
+}
+
+func (o *observedStream) started() bool {
+	return o.sawReasoning || o.sawContent
 }
 
 func buildSystemPrompt(req CommitRequest) string {

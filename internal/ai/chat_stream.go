@@ -15,9 +15,16 @@ type chatCompletionResponse struct {
 }
 
 type chatCompletionChunk struct {
+	Error   *chatStreamError `json:"error"`
 	Choices []struct {
-		Delta chatMessageDelta `json:"delta"`
+		Delta        chatMessageDelta `json:"delta"`
+		FinishReason string           `json:"finish_reason"`
 	} `json:"choices"`
+}
+
+type chatStreamError struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
 }
 
 type chatMessageDelta struct {
@@ -116,7 +123,13 @@ func handleSSEEvent(lines []string, content *strings.Builder, observer StreamObs
 	if err := json.Unmarshal([]byte(payload), &chunk); err != nil {
 		return false, err
 	}
+	if chunk.Error != nil && strings.TrimSpace(chunk.Error.Message) != "" {
+		return false, errors.New(strings.TrimSpace(chunk.Error.Message))
+	}
 	for _, choice := range chunk.Choices {
+		if choice.FinishReason == "error" && chunk.Error != nil && strings.TrimSpace(chunk.Error.Message) != "" {
+			return false, errors.New(strings.TrimSpace(chunk.Error.Message))
+		}
 		reasoning := firstNonEmpty(choice.Delta.ReasoningContent, choice.Delta.Reasoning)
 		if observer != nil && reasoning != "" {
 			observer.OnReasoningDelta(reasoning)
