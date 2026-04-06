@@ -96,10 +96,12 @@ func (g *OpenAIGenerator) Generate(ctx context.Context, req CommitRequest) (Comm
 		return g.fallback.Generate(ctx, req)
 	}
 
+	raw = stripMarkdownFences(raw)
 	subject, messageBody := splitAIMessage(raw)
+	subject = truncateSubject(subject, req.MaxSubjectLength)
 	return CommitMessage{
 		Subject: subject,
-		Body:    messageBody,
+		Body:    strings.TrimSpace(messageBody),
 		Raw:     joinMessage(subject, messageBody),
 		Source:  "ai",
 	}, nil
@@ -139,7 +141,7 @@ func buildSystemPrompt(req CommitRequest) string {
 	}
 	typeHint := ""
 	if strings.TrimSpace(req.Type) != "" {
-		typeHint = fmt.Sprintf(" Prefer commit type %q.", req.Type)
+		typeHint = fmt.Sprintf(" Prefer commit type %q only if the evidence clearly supports it.", req.Type)
 	}
 	scopeHint := ""
 	if strings.TrimSpace(req.Scope) != "" {
@@ -150,10 +152,10 @@ func buildSystemPrompt(req CommitRequest) string {
 		style = "conventional"
 	}
 	return fmt.Sprintf(
-		"You write high quality Git commit messages. Use %s style in %s. Keep the subject within %d characters. %s%s%s Do not add markdown fences or explanations.",
+		"You write high quality Git commit messages. Use %s style in %s. Keep the subject within %d characters. %s Use only the provided evidence. Do not invent features, bug fixes, behavior changes, or root causes. When the evidence is ambiguous or partial, prefer a broader summary. Prefer conservative commit types like refactor or chore when intent is unclear.%s%s Do not add markdown fences or explanations.",
 		style,
 		language,
-		req.MaxSubjectLength,
+		requiredSubjectLength(req.MaxSubjectLength),
 		bodyRule,
 		typeHint,
 		scopeHint,
@@ -161,6 +163,9 @@ func buildSystemPrompt(req CommitRequest) string {
 }
 
 func buildUserPrompt(req CommitRequest) string {
+	if prompt := strings.TrimSpace(req.Evidence.Prompt(defaultEvidenceBudgetChars)); prompt != "" {
+		return prompt + "\n\nWrite the commit message from this evidence only. If some details are missing, stay generic instead of guessing."
+	}
 	return fmt.Sprintf("Changed files:\n%s\n\nStaged diff:\n%s", strings.Join(req.Files, "\n"), req.Diff)
 }
 
@@ -173,4 +178,25 @@ func splitAIMessage(raw string) (string, string) {
 		body = strings.TrimSpace(parts[1])
 	}
 	return subject, body
+}
+
+func stripMarkdownFences(raw string) string {
+	clean := strings.TrimSpace(raw)
+	if strings.HasPrefix(clean, "```") {
+		clean = strings.TrimPrefix(clean, "```")
+		if idx := strings.Index(clean, "\n"); idx >= 0 {
+			clean = clean[idx+1:]
+		}
+	}
+	if strings.HasSuffix(clean, "```") {
+		clean = strings.TrimSuffix(clean, "```")
+	}
+	return strings.TrimSpace(clean)
+}
+
+func requiredSubjectLength(length int) int {
+	if length <= 0 {
+		return 72
+	}
+	return length
 }

@@ -81,13 +81,26 @@ func (a *App) runCommit(ctx context.Context, args []string) error {
 	if len(files) == 0 {
 		return errors.New(a.tr("message.no_staged_files"))
 	}
-	diff, err := a.git.StagedDiff(ctx)
+	compactDiff, err := a.git.StagedDiffForAI(ctx)
 	if err != nil {
 		return err
 	}
+	nameStatus, _ := a.git.StagedNameStatus(ctx)
+	numStat, _ := a.git.StagedNumStat(ctx)
+	summary, _ := a.git.StagedSummary(ctx)
+	dirStat, _ := a.git.StagedDirStat(ctx)
+	evidence := ai.BuildCommitEvidence(ai.CommitEvidenceInput{
+		Files:      files,
+		NameStatus: nameStatus,
+		NumStat:    numStat,
+		Summary:    summary,
+		DirStat:    dirStat,
+		Diff:       compactDiff,
+	})
 	req := ai.CommitRequest{
-		Diff:             diff,
+		Diff:             compactDiff,
 		Files:            files,
+		Evidence:         evidence,
 		Language:         firstNonEmpty(*lang, cfg.Commit.Language, cfg.AI.Language),
 		Style:            firstNonEmpty(*style, cfg.Commit.Style),
 		Type:             firstNonEmpty(*commitType, cfg.Commit.DefaultType),

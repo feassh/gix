@@ -184,6 +184,26 @@ func (c *Client) StagedDiff(ctx context.Context) (string, error) {
 	return c.run(ctx, "diff", "--cached", "--minimal")
 }
 
+func (c *Client) StagedDiffForAI(ctx context.Context) (string, error) {
+	return c.run(ctx, "diff", "--cached", "--minimal", "--find-renames", "--no-color", "--unified=0")
+}
+
+func (c *Client) StagedNameStatus(ctx context.Context) (string, error) {
+	return c.run(ctx, "diff", "--cached", "--name-status", "--find-renames")
+}
+
+func (c *Client) StagedNumStat(ctx context.Context) (string, error) {
+	return c.run(ctx, "diff", "--cached", "--numstat", "--find-renames")
+}
+
+func (c *Client) StagedSummary(ctx context.Context) (string, error) {
+	return c.run(ctx, "diff", "--cached", "--summary", "--find-renames")
+}
+
+func (c *Client) StagedDirStat(ctx context.Context) (string, error) {
+	return c.run(ctx, "diff", "--cached", "--dirstat=files,5,cumulative", "--find-renames")
+}
+
 func (c *Client) Add(ctx context.Context, all bool, update bool, patch bool, paths []string) error {
 	args := []string{"add"}
 	switch {
